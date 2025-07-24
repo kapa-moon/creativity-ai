@@ -19,6 +19,11 @@ export default function ChatPage() {
   const [isInQualtrics, setIsInQualtrics] = useState(false)
   const [dataSubmitted, setDataSubmitted] = useState(false)
   const [autoSubmitStatus, setAutoSubmitStatus] = useState<string>('')
+  const [pendingMessage, setPendingMessage] = useState<string>('')
+  const [questions, setQuestions] = useState<string[]>([
+    "What if this could____?",
+    "How might a child____?"
+  ])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatLogger = useRef(new ChatLogger())
   const inactivityTimer = useRef<NodeJS.Timeout | null>(null)
@@ -179,6 +184,46 @@ export default function ChatPage() {
       }, '*')
     }
   }, [messages.length, isInQualtrics])
+
+  const handleQuestionSelect = (question: string) => {
+    setPendingMessage(question)
+  }
+
+  // Generate creativity questions
+  const generateQuestions = useCallback(async () => {
+    try {
+      const response = await fetch('/api/creativity-questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatHistory: messages.slice(-6), // Send recent messages for context
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success && data.questions && data.questions.length >= 2) {
+        setQuestions(data.questions.slice(0, 2))
+      }
+    } catch (error) {
+      console.error('Error generating creativity questions:', error)
+      // Keep existing questions on error
+    }
+  }, [messages])
+
+  // Generate new questions periodically
+  useEffect(() => {
+    if (messages.length > 0 && messages.length % 4 === 0) {
+      generateQuestions()
+    }
+  }, [messages.length, generateQuestions])
+
+  // Generate initial questions
+  useEffect(() => {
+    generateQuestions()
+  }, [generateQuestions])
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return
@@ -367,9 +412,17 @@ export default function ChatPage() {
 
           {/* Input Area */}
           <div className="border-t border-gray-200 p-4">
-            <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
+            <ChatInput 
+              onSendMessage={handleSendMessage} 
+              disabled={isLoading}
+              pendingMessage={pendingMessage}
+              onMessageChange={setPendingMessage}
+              creativityQuestions={questions}
+              onQuestionSelect={handleQuestionSelect}
+            />
           </div>
         </div>
+
 
 
       </div>
