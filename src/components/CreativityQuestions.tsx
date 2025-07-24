@@ -48,7 +48,7 @@ export function CreativityQuestions({ messages, onQuestionSelect, isLoading = fa
     } finally {
       setIsGenerating(false)
     }
-  }, [messages])
+  }, [messages, isGenerating])
 
   // Generate new questions when messages change (but not too frequently)
   useEffect(() => {

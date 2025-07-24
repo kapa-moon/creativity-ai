@@ -10,7 +10,10 @@ export interface ChatEvent {
     nudgeMessage?: string
     responseTime?: number
     messageLength?: number
-    [key: string]: any
+    messageId?: string
+    selectionTime?: number
+    showTime?: number
+    dismissTime?: number
   }
 }
 
@@ -33,7 +36,16 @@ interface StoredChatLog {
     timestamp: string
     type: string
     content: string
-    metadata?: any
+    metadata?: {
+      promptText?: string
+      nudgeMessage?: string
+      responseTime?: number
+      messageLength?: number
+      messageId?: string
+      selectionTime?: number
+      showTime?: number
+      dismissTime?: number
+    }
   }>
   startTime: string
   lastActivity: string
@@ -108,6 +120,7 @@ export class ChatLogger {
           lastActivity: new Date(parsedLogs.lastActivity),
           events: parsedLogs.events.map(event => ({
             ...event,
+            type: event.type as ChatEvent['type'], // Type assertion to fix the error
             timestamp: new Date(event.timestamp)
           }))
         }
@@ -215,7 +228,7 @@ export class ChatLogger {
   }
 
   // Enhanced method to prepare detailed data for Qualtrics
-  prepareDetailedQualtricData(): Record<string, any> {
+  prepareDetailedQualtricData(): Record<string, string | number> {
     const events = this.logs.events
     
     return {

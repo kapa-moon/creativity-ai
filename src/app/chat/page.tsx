@@ -29,7 +29,6 @@ const nudgeMessages = [
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isInQualtrics, setIsInQualtrics] = useState(false)
   const [dataSubmitted, setDataSubmitted] = useState(false)
   const [autoSubmitStatus, setAutoSubmitStatus] = useState<string>('')
@@ -57,7 +56,6 @@ export default function ChatPage() {
   const submitToQualtrics = useCallback(async (isAutoSubmit: boolean = false) => {
     if (dataSubmitted) return // Prevent duplicate submissions
     
-    setIsSubmitting(true)
     if (isAutoSubmit) {
       setAutoSubmitStatus('Auto-submitting data...')
     }
@@ -107,13 +105,11 @@ export default function ChatPage() {
           alert('❌ Error submitting data: ' + (result.error || 'Unknown error'))
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error submitting to Qualtrics:', error)
       if (!isAutoSubmit) {
         alert('❌ Network error submitting data')
       }
-    } finally {
-      setIsSubmitting(false)
     }
   }, [dataSubmitted, isInQualtrics])
 
@@ -264,7 +260,7 @@ export default function ChatPage() {
     }
   }, [messages.length])
 
-  // Nudge timer - every 30 seconds
+  // Nudge timer - every 10 seconds
   useEffect(() => {
     if (nudgeTimer.current) {
       clearInterval(nudgeTimer.current)
@@ -366,19 +362,6 @@ export default function ChatPage() {
     setDataSubmitted(false)
     setAutoSubmitStatus('')
     await chatLogger.current.clearLogs()
-  }
-
-  const exportLogs = async () => {
-    const logs = await chatLogger.current.exportLogs()
-    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `chat-logs-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -499,8 +482,6 @@ export default function ChatPage() {
             />
           </div>
         </div>
-
-
 
       </div>
     </div>

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { chatHistory = [], userContext = "" } = body
+    const { chatHistory = [] } = body
 
     // Prepare context from chat history
     const recentMessages = chatHistory.slice(-6) // Last 6 messages for context
