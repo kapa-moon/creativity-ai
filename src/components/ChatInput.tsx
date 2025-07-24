@@ -32,13 +32,13 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
         onKeyPress={handleKeyPress}
         placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
         disabled={disabled}
-        className="flex-1 resize-none border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="flex-1 resize-none border border-gray-300 rounded-md px-3 py-2 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
         rows={2}
       />
       <button
         onClick={handleSubmit}
         disabled={disabled || !message.trim()}
-        className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        className="px-4 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
       >
         Send
       </button>

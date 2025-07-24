@@ -201,12 +201,36 @@ export default function ChatPage() {
     // Log user message
     await chatLogger.current.logMessage(userMessage)
 
-    // Simulate typing delay
-    setTimeout(async () => {
+    try {
+      // Prepare conversation history for API (last 10 messages for context)
+      const recentMessages = messages.slice(-10)
+      
+      // Call OpenAI API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content.trim(),
+          conversationHistory: recentMessages
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get AI response')
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'AI response was not successful')
+      }
+
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: `You said: ${content.trim()}`,
+        content: data.message,
         timestamp: new Date()
       }
 
@@ -215,7 +239,25 @@ export default function ChatPage() {
 
       // Log bot response
       await chatLogger.current.logMessage(botMessage)
-    }, 1000)
+
+    } catch (error: unknown) {
+      console.error('Error getting AI response:', error)
+      
+      const errorObj = error as { message?: string }
+      // Show error message to user
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: `⚠️ Sorry, I'm having trouble responding right now. ${errorObj.message || 'Unknown error'}`,
+        timestamp: new Date()
+      }
+
+      setMessages(prev => [...prev, errorMessage])
+      setIsLoading(false)
+
+      // Log error message
+      await chatLogger.current.logMessage(errorMessage)
+    }
   }
 
   const clearChat = async () => {
@@ -244,12 +286,12 @@ export default function ChatPage() {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {isInQualtrics ? '🔗 Qualtrics Survey Chat' : '🗨️ Qualtrics Integration Test Chat'}
+            {isInQualtrics ? '🔗 Qualtrics Survey Chat' : '🗨️ Creativity Support Tool'}
           </h1>
           <p className="text-gray-600 mb-4">
             {isInQualtrics 
               ? 'Chat naturally - your conversation will be automatically saved to the survey!'
-              : 'Simple chat interface with automatic data logging for Qualtrics surveys.'
+              : ''
             }
           </p>
           
@@ -275,33 +317,12 @@ export default function ChatPage() {
             {!isInQualtrics && (
               <button
                 onClick={clearChat}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                className="px-4 py-2 bg-white text-black border border-black hover:bg-pink-200 transition-colors"
+                style={{ borderRadius: '0px' }}
               >
                 Clear Chat
               </button>
             )}
-            {!isInQualtrics && (
-              <button
-                onClick={exportLogs}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-              >
-                Export Logs
-              </button>
-            )}
-            <button
-              onClick={() => submitToQualtrics(false)}
-              disabled={isSubmitting || messages.length === 0 || dataSubmitted}
-              className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
-            >
-              {isSubmitting 
-                ? 'Submitting...' 
-                : dataSubmitted 
-                  ? '✅ Data Submitted'
-                  : isInQualtrics 
-                    ? '📊 Submit Now (Optional)' 
-                    : 'Submit to Qualtrics'
-              }
-            </button>
           </div>
         </div>
 
@@ -350,28 +371,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mt-4">
-          <h3 className="font-semibold text-gray-900 mb-2">Session Stats</h3>
-          <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
-            <div>
-              <span className="font-medium">Total Messages:</span> {messages.length}
-            </div>
-            <div>
-              <span className="font-medium">User Messages:</span> {messages.filter(m => m.type === 'user').length}
-            </div>
-            <div>
-              <span className="font-medium">Session ID:</span> {chatLogger.current.getSessionId().slice(-8)}...
-            </div>
-          </div>
-          {isInQualtrics && (
-            <div className="mt-3 p-3 bg-gray-50 rounded-md">
-              <p className="text-sm text-gray-700">
-                📊 <strong>Auto-Save:</strong> {dataSubmitted ? 'Data saved ✅' : 'Will save automatically based on activity'}
-              </p>
-            </div>
-          )}
-        </div>
+
       </div>
     </div>
   )
