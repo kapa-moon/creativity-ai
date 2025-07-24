@@ -12,6 +12,20 @@ export interface Message {
   timestamp: Date
 }
 
+// Nudge messages for divergent thinking - moved outside component for stability
+const nudgeMessages = [
+  "💡 Try a different angle",
+  "🌿 What about nature uses?", 
+  "🎨 Consider artistic purposes",
+  "👶 Think like a child would",
+  "🏠 How about home solutions?",
+  "🚀 What if it was tiny?",
+  "⚡ What if it was magical?",
+  "🌍 Environmental angle?",
+  "🎯 Opposite direction?",
+  "🔄 Combine two ideas"
+]
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -24,9 +38,12 @@ export default function ChatPage() {
     "What if this could____?",
     "How might a child____?"
   ])
+  const [showNudge, setShowNudge] = useState(false)
+  const [currentNudge, setCurrentNudge] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatLogger = useRef(new ChatLogger())
   const inactivityTimer = useRef<NodeJS.Timeout | null>(null)
+  const nudgeTimer = useRef<NodeJS.Timeout | null>(null)
   const lastActivityTime = useRef<number>(Date.now())
 
   const scrollToBottom = () => {
@@ -46,7 +63,7 @@ export default function ChatPage() {
     }
     
     try {
-      const chatData = chatLogger.current.prepareQualtricData()
+      const chatData = chatLogger.current.prepareDetailedQualtricData()
       
       // Send to your API
       const response = await fetch('/api/qualtrics-data', {
@@ -140,6 +157,9 @@ export default function ChatPage() {
       if (inactivityTimer.current) {
         clearTimeout(inactivityTimer.current)
       }
+      if (nudgeTimer.current) {
+        clearInterval(nudgeTimer.current)
+      }
     }
   }, [messages.length, dataSubmitted, submitToQualtrics])
 
@@ -186,7 +206,10 @@ export default function ChatPage() {
   }, [messages.length, isInQualtrics])
 
   const handleQuestionSelect = (question: string) => {
-    setPendingMessage(question)
+    // Log quick prompt selection
+    const questionStem = question.replace(/____\??/g, '').trim()
+    chatLogger.current.logQuickPromptSelection(question, questionStem)
+    setPendingMessage(questionStem)
   }
 
   // Generate creativity questions
@@ -224,6 +247,39 @@ export default function ChatPage() {
   useEffect(() => {
     generateQuestions()
   }, [generateQuestions])
+
+  const showRandomNudge = useCallback(() => {
+    if (messages.length > 2) { // Only show after some conversation
+      const randomNudge = nudgeMessages[Math.floor(Math.random() * nudgeMessages.length)]
+      setCurrentNudge(randomNudge)
+      setShowNudge(true)
+      
+      // Log nudge shown
+      chatLogger.current.logNudgeShown(randomNudge)
+      
+      // Auto-hide after 8 seconds
+      setTimeout(() => {
+        setShowNudge(false)
+      }, 8000)
+    }
+  }, [messages.length])
+
+  // Nudge timer - every 30 seconds
+  useEffect(() => {
+    if (nudgeTimer.current) {
+      clearInterval(nudgeTimer.current)
+    }
+    
+    nudgeTimer.current = setInterval(() => {
+      showRandomNudge()
+    }, 10000) // 10 seconds
+
+    return () => {
+      if (nudgeTimer.current) {
+        clearInterval(nudgeTimer.current)
+      }
+    }
+  }, [showRandomNudge])
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return
@@ -358,15 +414,36 @@ export default function ChatPage() {
             </div>
           )}
           
-          <div className="flex gap-2 flex-wrap">
-            {!isInQualtrics && (
-              <button
-                onClick={clearChat}
-                className="px-4 py-2 bg-white text-black border border-black hover:bg-pink-200 transition-colors"
-                style={{ borderRadius: '0px' }}
-              >
-                Clear Chat
-              </button>
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2 flex-wrap">
+              {!isInQualtrics && (
+                <button
+                  onClick={clearChat}
+                  className="px-4 py-2 bg-white text-black border border-black hover:bg-pink-200 transition-colors"
+                  style={{ borderRadius: '0px' }}
+                >
+                  Clear Chat
+                </button>
+              )}
+            </div>
+            
+            {/* Nudge Box */}
+            {showNudge && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-sm text-gray-700 shadow-sm animate-pulse">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-500">💡</span>
+                  <span>{currentNudge}</span>
+                  <button 
+                    onClick={() => {
+                      chatLogger.current.logNudgeDismissed(currentNudge)
+                      setShowNudge(false)
+                    }}
+                    className="text-gray-400 hover:text-gray-600 ml-1"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>

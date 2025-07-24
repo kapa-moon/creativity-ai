@@ -1,8 +1,22 @@
 import { Message } from '@/app/chat/page'
 
+export interface ChatEvent {
+  id: string
+  timestamp: Date
+  type: 'user_message' | 'ai_response' | 'quick_prompt_selection' | 'nudge_shown' | 'nudge_dismissed' | 'session_start' | 'session_end'
+  content: string
+  metadata?: {
+    promptText?: string
+    nudgeMessage?: string
+    responseTime?: number
+    messageLength?: number
+    [key: string]: any
+  }
+}
+
 export interface ChatLog {
   sessionId: string
-  messages: Message[]
+  events: ChatEvent[]
   startTime: Date
   lastActivity: Date
   metadata: {
@@ -14,11 +28,12 @@ export interface ChatLog {
 
 interface StoredChatLog {
   sessionId: string
-  messages: Array<{
+  events: Array<{
     id: string
-    type: 'user' | 'bot'
-    content: string
     timestamp: string
+    type: string
+    content: string
+    metadata?: any
   }>
   startTime: string
   lastActivity: string
@@ -27,13 +42,6 @@ interface StoredChatLog {
     referrer: string
     url: string
   }
-}
-
-interface StoredMessage {
-  id: string
-  type: 'user' | 'bot'
-  content: string
-  timestamp: string
 }
 
 export class ChatLogger {
@@ -45,6 +53,9 @@ export class ChatLogger {
     this.sessionId = this.generateSessionId()
     this.logs = this.initializeLog()
     this.loadFromStorage()
+    
+    // Log session start
+    this.logEvent('session_start', 'Chat session started', {})
   }
 
   private generateSessionId(): string {
@@ -54,14 +65,33 @@ export class ChatLogger {
   private initializeLog(): ChatLog {
     return {
       sessionId: this.sessionId,
-      messages: [],
+      events: [],
       startTime: new Date(),
       lastActivity: new Date(),
       metadata: {
-        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : '',
+        userAgent: typeof window !== 'undefined' ? navigator.userAgent : '',
         referrer: typeof window !== 'undefined' ? document.referrer : '',
         url: typeof window !== 'undefined' ? window.location.href : ''
       }
+    }
+  }
+
+  private saveToStorage() {
+    if (typeof window === 'undefined') return
+
+    try {
+      const storableLog: StoredChatLog = {
+        ...this.logs,
+        startTime: this.logs.startTime.toISOString(),
+        lastActivity: this.logs.lastActivity.toISOString(),
+        events: this.logs.events.map(event => ({
+          ...event,
+          timestamp: event.timestamp.toISOString()
+        }))
+      }
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(storableLog))
+    } catch (error) {
+      console.error('Error saving chat logs to storage:', error)
     }
   }
 
@@ -72,14 +102,13 @@ export class ChatLogger {
       const stored = localStorage.getItem(this.STORAGE_KEY)
       if (stored) {
         const parsedLogs: StoredChatLog = JSON.parse(stored)
-        // Convert date strings back to Date objects
         this.logs = {
           ...parsedLogs,
           startTime: new Date(parsedLogs.startTime),
           lastActivity: new Date(parsedLogs.lastActivity),
-          messages: parsedLogs.messages.map((msg: StoredMessage) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
+          events: parsedLogs.events.map(event => ({
+            ...event,
+            timestamp: new Date(event.timestamp)
           }))
         }
       }
@@ -88,71 +117,148 @@ export class ChatLogger {
     }
   }
 
-  private saveToStorage() {
-    if (typeof window === 'undefined') return
-
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.logs))
-    } catch (error) {
-      console.error('Error saving chat logs to storage:', error)
+  async logEvent(
+    type: ChatEvent['type'], 
+    content: string, 
+    metadata: ChatEvent['metadata'] = {}
+  ): Promise<void> {
+    const event: ChatEvent = {
+      id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      timestamp: new Date(),
+      type,
+      content,
+      metadata
     }
-  }
 
-  async logMessage(message: Message): Promise<void> {
-    this.logs.messages.push(message)
+    this.logs.events.push(event)
     this.logs.lastActivity = new Date()
     this.saveToStorage()
 
-    // In a real application, you would also send this to your backend
-    console.log('Message logged:', {
+    console.log('Event logged:', {
       sessionId: this.sessionId,
-      messageId: message.id,
-      type: message.type,
-      timestamp: message.timestamp,
-      contentLength: message.content.length
+      eventType: type,
+      timestamp: event.timestamp,
+      content: content.substring(0, 100) + (content.length > 100 ? '...' : '')
     })
   }
 
-  async exportLogs(): Promise<ChatLog> {
-    return { ...this.logs }
+  async logMessage(message: Message): Promise<void> {
+    const type = message.type === 'user' ? 'user_message' : 'ai_response'
+    await this.logEvent(type, message.content, {
+      messageId: message.id,
+      messageLength: message.content.length
+    })
   }
 
-  async clearLogs(): Promise<void> {
-    this.logs = this.initializeLog()
-    this.saveToStorage()
+  async logQuickPromptSelection(promptText: string, selectedStem: string): Promise<void> {
+    await this.logEvent('quick_prompt_selection', selectedStem, {
+      promptText,
+      selectionTime: Date.now()
+    })
+  }
+
+  async logNudgeShown(nudgeMessage: string): Promise<void> {
+    await this.logEvent('nudge_shown', nudgeMessage, {
+      nudgeMessage,
+      showTime: Date.now()
+    })
+  }
+
+  async logNudgeDismissed(nudgeMessage: string): Promise<void> {
+    await this.logEvent('nudge_dismissed', nudgeMessage, {
+      nudgeMessage,
+      dismissTime: Date.now()
+    })
   }
 
   getSessionId(): string {
     return this.sessionId
   }
 
-  getMessageCount(): number {
-    return this.logs.messages.length
+  getEventCount(): number {
+    return this.logs.events.length
   }
 
   getUserMessageCount(): number {
-    return this.logs.messages.filter(msg => msg.type === 'user').length
+    return this.logs.events.filter(event => event.type === 'user_message').length
   }
 
-  getBotMessageCount(): number {
-    return this.logs.messages.filter(msg => msg.type === 'bot').length
+  getAIResponseCount(): number {
+    return this.logs.events.filter(event => event.type === 'ai_response').length
+  }
+
+  getQuickPromptUsageCount(): number {
+    return this.logs.events.filter(event => event.type === 'quick_prompt_selection').length
+  }
+
+  getNudgeInteractionCount(): number {
+    return this.logs.events.filter(event => 
+      event.type === 'nudge_shown' || event.type === 'nudge_dismissed'
+    ).length
   }
 
   getSessionDuration(): number {
-    return Date.now() - this.logs.startTime.getTime()
+    return this.logs.lastActivity.getTime() - this.logs.startTime.getTime()
   }
 
-  // Method to prepare data for Qualtrics integration
-  prepareQualtricData(): Record<string, string | number | null> {
+  async clearLogs(): Promise<void> {
+    await this.logEvent('session_end', 'Chat session cleared', {})
+    this.logs.events = []
+    this.logs.startTime = new Date()
+    this.logs.lastActivity = new Date()
+    this.saveToStorage()
+  }
+
+  async exportLogs(): Promise<ChatLog> {
+    await this.logEvent('session_end', 'Chat session exported', {})
+    return { ...this.logs }
+  }
+
+  // Enhanced method to prepare detailed data for Qualtrics
+  prepareDetailedQualtricData(): Record<string, any> {
+    const events = this.logs.events
+    
     return {
       sessionId: this.sessionId,
-      messageCount: this.getMessageCount(),
-      userMessageCount: this.getUserMessageCount(),
-      botMessageCount: this.getBotMessageCount(),
+      sessionDuration: this.getSessionDuration(),
+      totalEvents: this.getEventCount(),
+      userMessages: this.getUserMessageCount(),
+      aiResponses: this.getAIResponseCount(),
+      quickPromptUsage: this.getQuickPromptUsageCount(),
+      nudgeInteractions: this.getNudgeInteractionCount(),
+      startTime: this.logs.startTime.toISOString(),
+      endTime: this.logs.lastActivity.toISOString(),
+      userAgent: this.logs.metadata.userAgent,
+      referrer: this.logs.metadata.referrer,
+      url: this.logs.metadata.url,
+      // Detailed event log as JSON string
+      detailedEvents: JSON.stringify(events.map(event => ({
+        id: event.id,
+        timestamp: event.timestamp.toISOString(),
+        type: event.type,
+        content: event.content,
+        metadata: event.metadata
+      })))
+    }
+  }
+
+  // Backward compatibility - simplified data
+  prepareQualtricData(): Record<string, string | number | null> {
+    const userMessages = this.logs.events.filter(e => e.type === 'user_message')
+    const aiMessages = this.logs.events.filter(e => e.type === 'ai_response')
+    
+    return {
+      sessionId: this.sessionId,
+      messageCount: userMessages.length + aiMessages.length,
+      userMessageCount: userMessages.length,
+      botMessageCount: aiMessages.length,
       sessionDurationMs: this.getSessionDuration(),
-      firstMessage: this.logs.messages[0]?.content || null,
-      lastMessage: this.logs.messages[this.logs.messages.length - 1]?.content || null,
-      conversationSummary: this.logs.messages.map(msg => `${msg.type}: ${msg.content}`).join(' | '),
+      firstMessage: userMessages[0]?.content || null,
+      lastMessage: aiMessages[aiMessages.length - 1]?.content || null,
+      conversationSummary: [...userMessages, ...aiMessages]
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+        .map(event => `${event.type === 'user_message' ? 'user' : 'bot'}: ${event.content}`)
+        .join(' | '),
       userAgent: this.logs.metadata.userAgent,
       referrer: this.logs.metadata.referrer,
       url: this.logs.metadata.url

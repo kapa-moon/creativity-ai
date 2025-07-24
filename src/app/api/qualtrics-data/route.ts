@@ -7,21 +7,35 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'submitChatData':
-        // This would typically save to your database
-        // For now, we'll just log and return success
-        console.log('Chat data received for Qualtrics:', {
+        // Log detailed data for analysis
+        console.log('Detailed chat data received for Qualtrics:', {
           sessionId,
-          data,
+          summary: {
+            totalEvents: data.totalEvents,
+            userMessages: data.userMessages,
+            aiResponses: data.aiResponses,
+            quickPromptUsage: data.quickPromptUsage,
+            nudgeInteractions: data.nudgeInteractions,
+            sessionDuration: data.sessionDuration
+          },
           timestamp: new Date().toISOString()
         })
 
-        // In a real app, you'd save to database here
-        // await saveChatDataToDatabase(sessionId, data)
+        // Parse and log individual events for detailed analysis
+        if (data.detailedEvents) {
+          try {
+            const events = JSON.parse(data.detailedEvents)
+            console.log('Individual events:', events.slice(0, 5)) // Log first 5 events
+          } catch (e) {
+            console.error('Error parsing detailed events:', e)
+          }
+        }
 
         return NextResponse.json({
           success: true,
-          message: 'Chat data received successfully',
-          sessionId
+          message: 'Detailed chat data received successfully',
+          sessionId,
+          eventsLogged: data.totalEvents || 0
         })
 
       case 'getChatSummary':
