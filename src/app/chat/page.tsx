@@ -370,7 +370,8 @@ export default function ChatPage() {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {isInQualtrics ? '🔗 Qualtrics Survey Chat' : '🗨️ Creativity Support Tool'}
+            {/* {isInQualtrics ? '🔗 Qualtrics Survey Chat' : '🗨️ Creativity Support Tool'} */}
+            🗨️ Co-Pilot AI
           </h1>
           <p className="text-gray-600 mb-4">
             {isInQualtrics 
@@ -438,7 +439,7 @@ export default function ChatPage() {
             {messages.length === 0 ? (
               <div className="text-center text-gray-500 mt-8">
                 <p>Start a conversation...</p>
-                {isInQualtrics && (
+                {/* {isInQualtrics && (
                   <div className="mt-4 p-4 bg-blue-50 rounded-md">
                     <p className="text-sm text-blue-700">
                       💡 <strong>Auto-Save Enabled:</strong> Your conversation will be automatically saved to the survey after:
@@ -449,7 +450,7 @@ export default function ChatPage() {
                       <li>• When you leave this page</li>
                     </ul>
                   </div>
-                )}
+                )} */}
               </div>
             ) : (
               messages.map((message) => (
