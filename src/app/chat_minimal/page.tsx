@@ -281,7 +281,8 @@ export default function MinimalChatPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {/* Header - Commented out for cleaner iframe display */}
+        {/*
         <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             🗨️ Minimal Chat Interface
@@ -292,24 +293,6 @@ export default function MinimalChatPage() {
               : 'Simple chat interface for research purposes.'
             }
           </p>
-          
-          {/* Auto-submit status */}
-          {autoSubmitStatus && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-blue-800 text-sm">
-                🤖 {autoSubmitStatus}
-              </p>
-            </div>
-          )}
-
-          {/* Data submitted confirmation */}
-          {dataSubmitted && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-              <p className="text-green-800 text-sm font-medium">
-                ✅ Data automatically saved to survey! {isInQualtrics && 'You can continue to the next question.'}
-              </p>
-            </div>
-          )}
           
           <div className="flex justify-between items-center">
             <div className="flex gap-2 flex-wrap">
@@ -324,7 +307,6 @@ export default function MinimalChatPage() {
               )}
             </div>
             
-            {/* Session Info */}
             <div className="text-sm text-gray-500">
               Session ID: {chatLogger.current?.getSessionId()?.slice(-8) || 'Loading...'}
               <br />
@@ -332,6 +314,7 @@ export default function MinimalChatPage() {
             </div>
           </div>
         </div>
+        */}
 
         {/* Chat Container */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
