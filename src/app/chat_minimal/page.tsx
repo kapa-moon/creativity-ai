@@ -48,52 +48,84 @@ export default function MinimalChatPage() {
       }
       const chatData = chatLogger.current.prepareQualtricData()
       
-      // Send to your API
-      const response = await fetch('/api/minimal-chat-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sessionId: chatLogger.current!.getSessionId(),
-          action: 'submitChatData',
-          data: chatData
-        })
-      })
-
-      const result = await response.json()
-      
-      if (result.success) {
+      // Always notify parent window (Qualtrics) with the data, even if API fails
+      if (isInQualtrics) {
+        console.log('Sending chat data to parent window:', chatData)
+        window.parent.postMessage({
+          type: 'chatDataSubmitted',
+          data: chatData,
+          sessionId: chatLogger.current.getSessionId()
+        }, '*')
+        
         setDataSubmitted(true)
         setAutoSubmitStatus('')
         
-        // Notify parent window (Qualtrics) with the data
-        if (isInQualtrics) {
-          window.parent.postMessage({
-            type: 'chatDataSubmitted',
-            data: chatData,
-            sessionId: result.sessionId
-          }, '*')
-          
-          if (!isAutoSubmit) {
-            alert(`✅ Data submitted to survey successfully!\nSession ID: ${result.sessionId}`)
-          }
-        } else {
-          if (!isAutoSubmit) {
-            alert(`✅ Data submitted successfully!\nSession ID: ${result.sessionId}`)
-          }
+        if (!isAutoSubmit) {
+          console.log(`✅ Data submitted to survey successfully! Session ID: ${chatLogger.current.getSessionId()}`)
         }
         
         console.log('Minimal chat data submitted:', chatData)
-      } else {
+        return // Exit early for Qualtrics, don't need API call
+      }
+      
+      // For non-Qualtrics usage, still try API call
+      try {
+        const response = await fetch('/api/minimal-chat-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId: chatLogger.current!.getSessionId(),
+            action: 'submitChatData',
+            data: chatData
+          })
+        })
+
+        const result = await response.json()
+        
+        if (result.success) {
+          setDataSubmitted(true)
+          setAutoSubmitStatus('')
+          
+          if (!isAutoSubmit) {
+            alert(`✅ Data submitted successfully!\nSession ID: ${result.sessionId}`)
+          }
+          
+          console.log('Minimal chat data submitted:', chatData)
+        } else {
+          console.error('API error:', result.error)
+          if (!isAutoSubmit) {
+            alert('❌ Error submitting data: ' + (result.error || 'Unknown error'))
+          }
+        }
+      } catch (apiError) {
+        console.error('API call failed:', apiError)
+        // For non-Qualtrics usage, still mark as submitted if we have data
+        setDataSubmitted(true)
+        setAutoSubmitStatus('')
         if (!isAutoSubmit) {
-          alert('❌ Error submitting data: ' + (result.error || 'Unknown error'))
+          console.log('API call failed, but data is available for export')
         }
       }
+      
     } catch (error: unknown) {
       console.error('Error submitting to Qualtrics:', error)
+      
+      // Even if there's an error, try to send data to parent window
+      if (isInQualtrics && chatLogger.current) {
+        const chatData = chatLogger.current.prepareQualtricData()
+        console.log('Sending chat data to parent window despite error:', chatData)
+        window.parent.postMessage({
+          type: 'chatDataSubmitted',
+          data: chatData,
+          sessionId: chatLogger.current.getSessionId()
+        }, '*')
+        setDataSubmitted(true)
+      }
+      
       if (!isAutoSubmit) {
-        alert('❌ Network error submitting data')
+        console.error('Error during submission:', error)
       }
     }
   }, [dataSubmitted, isInQualtrics])
@@ -106,7 +138,21 @@ export default function MinimalChatPage() {
     // Listen for messages from parent (Qualtrics)
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'forceSubmitData') {
-        submitToQualtrics(true)
+        console.log('Received forceSubmitData message from parent')
+        if (!dataSubmitted && messages.length > 0) {
+          submitToQualtrics(true)
+        } else if (messages.length > 0) {
+          // Even if already submitted, send data again to ensure parent gets it
+          if (chatLogger.current && isInQualtrics) {
+            const chatData = chatLogger.current.prepareQualtricData()
+            console.log('Re-sending chat data to parent window:', chatData)
+            window.parent.postMessage({
+              type: 'chatDataSubmitted',
+              data: chatData,
+              sessionId: chatLogger.current.getSessionId()
+            }, '*')
+          }
+        }
       }
     }
 
@@ -152,9 +198,9 @@ export default function MinimalChatPage() {
 
     lastActivityTime.current = Date.now()
 
-    // Auto-submit after 6+ messages (good conversation)
-    if (messages.length >= 6 && !dataSubmitted) {
-      setAutoSubmitStatus('Auto-submitting after reaching 6 messages...')
+    // Auto-submit after 2+ messages (good conversation)
+    if (messages.length >= 2 && !dataSubmitted) {
+      setAutoSubmitStatus('Auto-submitting after reaching 2 messages...')
       setTimeout(() => submitToQualtrics(true), 2000)
       return
     }
