@@ -35,10 +35,11 @@ export default function MinimalChatPage() {
   }, [messages])
 
   const submitToQualtrics = useCallback(async (isAutoSubmit: boolean = false, allowUpdate: boolean = false) => {
-    if (dataSubmitted && !allowUpdate) return // Prevent duplicate submissions unless updating
+    // Allow updates anytime, but prevent initial submission duplicates
+    if (dataSubmitted && !allowUpdate && !isAutoSubmit) return
     
-    if (isAutoSubmit) {
-      setAutoSubmitStatus('Auto-submitting data...')
+    if (isAutoSubmit && !allowUpdate) {
+      setAutoSubmitStatus('Submitting data...')
     }
     
     try {
@@ -59,8 +60,8 @@ export default function MinimalChatPage() {
         
         if (!allowUpdate) {
           setDataSubmitted(true)
+          setAutoSubmitStatus('')
         }
-        setAutoSubmitStatus('')
         
         if (!isAutoSubmit) {
           console.log(`✅ Data ${allowUpdate ? 'updated' : 'submitted'} to survey successfully! Session ID: ${chatLogger.current.getSessionId()}`)
@@ -189,36 +190,21 @@ export default function MinimalChatPage() {
     }
   }, [messages.length, dataSubmitted, submitToQualtrics])
 
-  // Auto-submit logic based on activity
+  // Continuous chat data updates - send to Qualtrics after every message
   useEffect(() => {
-    if (messages.length === 0 || dataSubmitted) return
-
-    // Reset inactivity timer
-    if (inactivityTimer.current) {
-      clearTimeout(inactivityTimer.current)
+    if (messages.length === 0) return
+    
+    // Always update chat data when in Qualtrics iframe
+    if (isInQualtrics && chatLogger.current) {
+      console.log('Continuously updating chat data, messages:', messages.length)
+      
+      // Small delay to ensure message is logged
+      setTimeout(() => {
+        submitToQualtrics(true, true) // Always allow updates
+      }, 100)
     }
 
-    lastActivityTime.current = Date.now()
-
-    // Auto-submit after 8+ messages (good conversation)
-    if (messages.length >= 8 && !dataSubmitted) {
-      setAutoSubmitStatus('Auto-submitting after reaching 8 messages...')
-      setTimeout(() => submitToQualtrics(true), 2000)
-      return
-    }
-
-    // Auto-submit after 30 seconds of inactivity (if 2+ messages)
-    if (messages.length >= 2) {
-      setAutoSubmitStatus('Will auto-submit after 30 seconds of inactivity...')
-      inactivityTimer.current = setTimeout(() => {
-        if (!dataSubmitted) {
-          setAutoSubmitStatus('Auto-submitting due to inactivity...')
-          submitToQualtrics(true)
-        }
-      }, 30000) // 30 seconds
-    }
-
-  }, [messages.length, dataSubmitted, submitToQualtrics])
+  }, [messages.length, isInQualtrics, submitToQualtrics])
 
   // Send updates to parent window (Qualtrics)
   useEffect(() => {
@@ -228,22 +214,14 @@ export default function MinimalChatPage() {
         messageCount: messages.length,
         sessionId: chatLogger.current.getSessionId()
       }, '*')
-      
-      // Also update chat data if already submitted (to capture new messages)
-      if (dataSubmitted && messages.length > 2) {
-        console.log('Updating chat data with new messages:', messages.length)
-        submitToQualtrics(true, true) // Allow update even if already submitted
-      }
     }
-  }, [messages.length, isInQualtrics, dataSubmitted, submitToQualtrics])
+  }, [messages.length, isInQualtrics])
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return
 
-    // Clear auto-submit status when user is actively chatting
-    if (autoSubmitStatus.includes('inactivity')) {
-      setAutoSubmitStatus('')
-    }
+    // Clear any existing auto-submit status
+    setAutoSubmitStatus('')
 
     const userMessage: Message = {
       id: Date.now().toString(),
