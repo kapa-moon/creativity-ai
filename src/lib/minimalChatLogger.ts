@@ -40,7 +40,21 @@ export class MinimalChatLogger {
     this.sessionId = this.generateSessionId()
     this.participantId = participantId || this.generateParticipantId()
     this.logs = this.initializeLog()
-    this.loadFromStorage()
+    // Clear any previous session data for fresh start
+    this.clearPreviousSessionData()
+  }
+
+  // Clear any previous session data for fresh start
+  private clearPreviousSessionData() {
+    if (typeof window === 'undefined') return
+    
+    try {
+      // Clear localStorage to ensure fresh start
+      localStorage.removeItem(this.STORAGE_KEY)
+      console.log('Cleared previous session data for fresh start')
+    } catch (error) {
+      console.error('Error clearing previous session data:', error)
+    }
   }
 
   // Initialize session logging (call this after component mounts)
@@ -159,11 +173,10 @@ export class MinimalChatLogger {
   }
 
   async clearLogs(): Promise<void> {
-    await this.logEvent('session_end', 'Chat session cleared')
-    this.logs.events = []
-    this.logs.startTime = new Date()
-    this.logs.lastActivity = new Date()
-    this.saveToStorage()
+    // Clear everything and start fresh
+    this.clearPreviousSessionData()
+    this.logs = this.initializeLog()
+    console.log('Chat logs cleared and reinitialized')
   }
 
   // Prepare data for Qualtrics - simplified version
