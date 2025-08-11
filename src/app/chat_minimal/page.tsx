@@ -34,8 +34,8 @@ export default function MinimalChatPage() {
     scrollToBottom()
   }, [messages])
 
-  const submitToQualtrics = useCallback(async (isAutoSubmit: boolean = false) => {
-    if (dataSubmitted) return // Prevent duplicate submissions
+  const submitToQualtrics = useCallback(async (isAutoSubmit: boolean = false, allowUpdate: boolean = false) => {
+    if (dataSubmitted && !allowUpdate) return // Prevent duplicate submissions unless updating
     
     if (isAutoSubmit) {
       setAutoSubmitStatus('Auto-submitting data...')
@@ -57,11 +57,13 @@ export default function MinimalChatPage() {
           sessionId: chatLogger.current.getSessionId()
         }, '*')
         
-        setDataSubmitted(true)
+        if (!allowUpdate) {
+          setDataSubmitted(true)
+        }
         setAutoSubmitStatus('')
         
         if (!isAutoSubmit) {
-          console.log(`✅ Data submitted to survey successfully! Session ID: ${chatLogger.current.getSessionId()}`)
+          console.log(`✅ Data ${allowUpdate ? 'updated' : 'submitted'} to survey successfully! Session ID: ${chatLogger.current.getSessionId()}`)
         }
         
         console.log('Minimal chat data submitted:', chatData)
@@ -198,9 +200,9 @@ export default function MinimalChatPage() {
 
     lastActivityTime.current = Date.now()
 
-    // Auto-submit after 2+ messages (good conversation)
-    if (messages.length >= 2 && !dataSubmitted) {
-      setAutoSubmitStatus('Auto-submitting after reaching 2 messages...')
+    // Auto-submit after 8+ messages (good conversation)
+    if (messages.length >= 8 && !dataSubmitted) {
+      setAutoSubmitStatus('Auto-submitting after reaching 8 messages...')
       setTimeout(() => submitToQualtrics(true), 2000)
       return
     }
@@ -226,8 +228,14 @@ export default function MinimalChatPage() {
         messageCount: messages.length,
         sessionId: chatLogger.current.getSessionId()
       }, '*')
+      
+      // Also update chat data if already submitted (to capture new messages)
+      if (dataSubmitted && messages.length > 2) {
+        console.log('Updating chat data with new messages:', messages.length)
+        submitToQualtrics(true, true) // Allow update even if already submitted
+      }
     }
-  }, [messages.length, isInQualtrics])
+  }, [messages.length, isInQualtrics, dataSubmitted, submitToQualtrics])
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return
