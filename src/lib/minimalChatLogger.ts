@@ -167,7 +167,7 @@ export class MinimalChatLogger {
   }
 
   // Prepare data for Qualtrics - simplified version
-  prepareQualtricData(): Record<string, string | number> {
+  prepareQualtricData(): Record<string, any> {
     const userMessages = this.logs.events.filter(e => e.type === 'user_message')
     const aiMessages = this.logs.events.filter(e => e.type === 'ai_response')
     
@@ -180,14 +180,14 @@ export class MinimalChatLogger {
       sessionDurationMs: this.getSessionDuration(),
       startTime: this.logs.startTime.toISOString(),
       endTime: this.logs.lastActivity.toISOString(),
-      // Detailed conversation log
-      conversationLog: JSON.stringify(this.logs.events.map(event => ({
+      // Detailed conversation log as array (will be stringified later)
+      conversationLog: this.logs.events.map(event => ({
         id: event.id,
         timestamp: event.timestamp.toISOString(),
         type: event.type,
         content: event.content,
         participantId: event.participantId
-      })))
+      }))
     }
   }
 

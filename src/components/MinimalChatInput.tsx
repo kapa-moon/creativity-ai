@@ -29,7 +29,7 @@ export function MinimalChatInput({
 
   return (
     <div className="flex gap-2">
-      <div className="flex-1 border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+      <div className="flex-1 border border-gray-300 rounded-md focus-within:ring-1 focus-within:ring-black focus-within:border-black">
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -43,7 +43,7 @@ export function MinimalChatInput({
       <button
         onClick={handleSubmit}
         disabled={disabled || !message.trim()}
-        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 focus:outline-none disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
       >
         Send
       </button>

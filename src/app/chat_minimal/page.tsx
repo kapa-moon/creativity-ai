@@ -279,10 +279,9 @@ export default function MinimalChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header - Commented out for cleaner iframe display */}
-        {/*
+    <div className="h-screen bg-gray-50 flex flex-col">
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-4">
+        {/* Header - Commented out for cleaner iframe display
         <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             🗨️ Minimal Chat Interface
@@ -317,9 +316,9 @@ export default function MinimalChatPage() {
         */}
 
         {/* Chat Container */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col flex-1">
           {/* Messages Area */}
-          <div className="h-96 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 ? (
               <div className="text-center text-gray-500 mt-8">
                 <p>Start a conversation...</p>
