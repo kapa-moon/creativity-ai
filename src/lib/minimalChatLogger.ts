@@ -167,7 +167,13 @@ export class MinimalChatLogger {
   }
 
   // Prepare data for Qualtrics - simplified version
-  prepareQualtricData(): Record<string, any> {
+  prepareQualtricData(): Record<string, string | number | Array<{
+    id: string;
+    timestamp: string;
+    type: string;
+    content: string;
+    participantId: string;
+  }>> {
     const userMessages = this.logs.events.filter(e => e.type === 'user_message')
     const aiMessages = this.logs.events.filter(e => e.type === 'ai_response')
     

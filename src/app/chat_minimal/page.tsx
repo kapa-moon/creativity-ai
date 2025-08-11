@@ -269,6 +269,7 @@ export default function MinimalChatPage() {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearChat = async () => {
     setMessages([])
     setDataSubmitted(false)
