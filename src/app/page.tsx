@@ -22,6 +22,19 @@ export default function Home() {
               Open Chat Interface →
             </Link>
           </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-3">
+              🗨️ Minimal Chat Interface
+            </h2>
+
+            <Link 
+              href="/chat_minimal"
+              className="inline-flex items-center px-6 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors font-medium"
+            >
+              Open Minimal Chat →
+            </Link>
+          </div>
       </main>
       
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center text-sm text-gray-500">
