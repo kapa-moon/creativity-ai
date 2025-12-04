@@ -138,6 +138,12 @@ export default function MinimalChatPage() {
     const inIframe = window !== window.parent
     setIsInQualtrics(inIframe)
     
+    // If in iframe, ask parent if we should restore state
+    if (inIframe) {
+      console.log('Iframe loaded, asking parent for initialization state')
+      window.parent.postMessage({ type: 'requestInitialState' }, '*')
+    }
+    
     // Listen for messages from parent (Qualtrics)
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'forceSubmitData') {
@@ -187,6 +193,15 @@ export default function MinimalChatPage() {
             sessionId: restoredData.sessionId
           })
         }
+      } else if (event.data.type === 'startFresh') {
+        console.log('Received startFresh message - starting with clean state')
+        // Ensure we start completely fresh
+        setMessages([])
+        setDataSubmitted(false)
+        if (chatLogger.current) {
+          chatLogger.current.clearLogs()
+        }
+        console.log('Started with fresh state')
       } else if (event.data.type === 'clearChatStorage') {
         console.log('Received clearChatStorage message - clearing for next question')
         // Clear all state for the next question
