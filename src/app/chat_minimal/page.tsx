@@ -16,6 +16,7 @@ export default function MinimalChatPage() {
   const chatLogger = useRef<MinimalChatLogger | null>(null)
   const inactivityTimer = useRef<NodeJS.Timeout | null>(null)
   const lastActivityTime = useRef<number>(Date.now())
+  const initialStateRequested = useRef<boolean>(false)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -139,9 +140,11 @@ export default function MinimalChatPage() {
     setIsInQualtrics(inIframe)
     
     // Request initial state from parent (localStorage restoration approach)
-    if (inIframe) {
+    // ONLY ONCE on initial mount (use ref to prevent multiple requests)
+    if (inIframe && !initialStateRequested.current) {
       console.log('Iframe loaded, asking parent for initialization state')
       window.parent.postMessage({ type: 'requestInitialState' }, '*')
+      initialStateRequested.current = true
     }
     
     // Listen for messages from parent (Qualtrics)
@@ -203,25 +206,31 @@ export default function MinimalChatPage() {
         }
       } else if (event.data.type === 'startFresh') {
         console.log('Received startFresh message - starting with clean state')
-        // Force clear localStorage to ensure no stale data
-        try {
-          localStorage.removeItem('minimal-chat-logs')
-          console.log('Cleared localStorage for fresh start')
-        } catch (e) {
-          console.error('Error clearing localStorage:', e)
+        
+        // Only clear if we don't have any messages yet (prevents clearing after user starts chatting)
+        if (messages.length === 0) {
+          // Force clear localStorage to ensure no stale data
+          try {
+            localStorage.removeItem('minimal-chat-logs')
+            console.log('Cleared localStorage for fresh start')
+          } catch (e) {
+            console.error('Error clearing localStorage:', e)
+          }
+          
+          // Ensure we start completely fresh
+          setMessages([])
+          setDataSubmitted(false)
+          
+          if (chatLogger.current) {
+            // Reinitialize the logger with fresh state
+            chatLogger.current.clearLogs()
+            chatLogger.current.initializeSession()
+          }
+          
+          console.log('Started with fresh state')
+        } else {
+          console.log('Ignoring startFresh - user has already started chatting')
         }
-        
-        // Ensure we start completely fresh
-        setMessages([])
-        setDataSubmitted(false)
-        
-        if (chatLogger.current) {
-          // Reinitialize the logger with fresh state
-          chatLogger.current.clearLogs()
-          chatLogger.current.initializeSession()
-        }
-        
-        console.log('Started with fresh state')
       } else if (event.data.type === 'clearChatStorage') {
         console.log('Received clearChatStorage message - clearing for next question')
         // Clear all state for the next question
