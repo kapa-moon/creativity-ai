@@ -112,6 +112,12 @@ export default function ChatPage() {
     const inIframe = window !== window.parent
     setIsInQualtrics(inIframe)
     
+    // If in iframe, ask parent if we should restore state
+    if (inIframe) {
+      console.log('Iframe loaded, asking parent for initialization state')
+      window.parent.postMessage({ type: 'requestInitialState' }, '*')
+    }
+    
     // Listen for messages from parent (Qualtrics)
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'forceSubmitData') {
@@ -121,6 +127,14 @@ export default function ChatPage() {
         const restoredData = event.data.data
         
         if (restoredData && restoredData.conversationLog) {
+          // Force clear any stale localStorage before restoring
+          try {
+            localStorage.removeItem('chat-logs')
+            console.log('Cleared stale localStorage before restoration')
+          } catch (e) {
+            console.error('Error clearing localStorage:', e)
+          }
+          
           // Convert conversationLog events to Message format with proper Date objects
           const restoredMessages = restoredData.conversationLog
             .filter((event: { type: string }) => event.type === 'user_message' || event.type === 'ai_response')
@@ -142,6 +156,19 @@ export default function ChatPage() {
             sessionId: restoredData.sessionId
           })
         }
+      } else if (event.data.type === 'startFresh') {
+        console.log('Received startFresh message - starting with clean state')
+        // Force clear localStorage to ensure no stale data
+        try {
+          localStorage.removeItem('chat-logs')
+          console.log('Cleared localStorage for fresh start')
+        } catch (e) {
+          console.error('Error clearing localStorage:', e)
+        }
+        
+        // Ensure we start completely fresh
+        clearChat()
+        console.log('Started with fresh state')
       } else if (event.data.type === 'clearChatStorage') {
         console.log('Received clearChatStorage message - clearing for next question')
         // Clear all state for the next question

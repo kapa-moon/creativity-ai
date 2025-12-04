@@ -40,8 +40,7 @@ export class MinimalChatLogger {
     this.sessionId = this.generateSessionId()
     this.participantId = participantId || this.generateParticipantId()
     this.logs = this.initializeLog()
-    // Clear any previous session data for fresh start
-    this.clearPreviousSessionData()
+    // Don't automatically clear - let the parent control initialization
   }
 
   // Clear any previous session data for fresh start

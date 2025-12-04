@@ -25,8 +25,7 @@ export default function MinimalChatPage() {
   useEffect(() => {
     if (!chatLogger.current) {
       chatLogger.current = new MinimalChatLogger()
-      // Initialize session logging after component mounts
-      chatLogger.current.initializeSession()
+      // Don't initialize session yet - wait for parent's response
     }
   }, [])
 
@@ -167,6 +166,14 @@ export default function MinimalChatPage() {
         const restoredData = event.data.data
         
         if (restoredData && restoredData.conversationLog) {
+          // Force clear any stale localStorage before restoring
+          try {
+            localStorage.removeItem('minimal-chat-logs')
+            console.log('Cleared stale localStorage before restoration')
+          } catch (e) {
+            console.error('Error clearing localStorage:', e)
+          }
+          
           // Convert conversationLog events to Message format with proper Date objects
           const restoredMessages = restoredData.conversationLog
             .filter((event: { type: string }) => event.type === 'user_message' || event.type === 'ai_response')
@@ -195,12 +202,24 @@ export default function MinimalChatPage() {
         }
       } else if (event.data.type === 'startFresh') {
         console.log('Received startFresh message - starting with clean state')
+        // Force clear localStorage to ensure no stale data
+        try {
+          localStorage.removeItem('minimal-chat-logs')
+          console.log('Cleared localStorage for fresh start')
+        } catch (e) {
+          console.error('Error clearing localStorage:', e)
+        }
+        
         // Ensure we start completely fresh
         setMessages([])
         setDataSubmitted(false)
+        
         if (chatLogger.current) {
+          // Reinitialize the logger with fresh state
           chatLogger.current.clearLogs()
+          chatLogger.current.initializeSession()
         }
+        
         console.log('Started with fresh state')
       } else if (event.data.type === 'clearChatStorage') {
         console.log('Received clearChatStorage message - clearing for next question')
