@@ -138,12 +138,11 @@ export default function MinimalChatPage() {
     const inIframe = window !== window.parent
     setIsInQualtrics(inIframe)
     
-    // NOTE: Iframe persistence approach - no need to request state
-    // The iframe persists when validation fails, so state stays in memory
-    // if (inIframe) {
-    //   console.log('Iframe loaded, asking parent for initialization state')
-    //   window.parent.postMessage({ type: 'requestInitialState' }, '*')
-    // }
+    // Request initial state from parent (localStorage restoration approach)
+    if (inIframe) {
+      console.log('Iframe loaded, asking parent for initialization state')
+      window.parent.postMessage({ type: 'requestInitialState' }, '*')
+    }
     
     // Listen for messages from parent (Qualtrics)
     const handleMessage = (event: MessageEvent) => {
@@ -163,71 +162,67 @@ export default function MinimalChatPage() {
             }, '*')
           }
         }
-      } 
-      // NOTE: LocalStorage restoration handlers commented out
-      // With iframe persistence, these are no longer needed
-      // else if (event.data.type === 'restoreChatState') {
-      //   console.log('Received restoreChatState message from parent', event.data.data)
-      //   const restoredData = event.data.data
-      //   
-      //   if (restoredData && restoredData.conversationLog) {
-      //     // Force clear any stale localStorage before restoring
-      //     try {
-      //       localStorage.removeItem('minimal-chat-logs')
-      //       console.log('Cleared stale localStorage before restoration')
-      //     } catch (e) {
-      //       console.error('Error clearing localStorage:', e)
-      //     }
-      //     
-      //     // Convert conversationLog events to Message format with proper Date objects
-      //     const restoredMessages = restoredData.conversationLog
-      //       .filter((event: { type: string }) => event.type === 'user_message' || event.type === 'ai_response')
-      //       .map((event: { id: string; timestamp: string; type: string; content: string }) => ({
-      //         id: event.id,
-      //         timestamp: new Date(event.timestamp), // Convert string to Date object
-      //         type: event.type === 'user_message' ? 'user' as const : 'bot' as const,
-      //         content: event.content
-      //       }))
-      //     
-      //     // Restore messages
-      //     setMessages(restoredMessages)
-      //     
-      //     // Restore chat logger state
-      //     if (chatLogger.current) {
-      //       chatLogger.current.restoreFromQualtricData(restoredData)
-      //     }
-      //     
-      //     // Mark as already submitted (since we're restoring)
-      //     setDataSubmitted(true)
-      //     
-      //     console.log('Chat state restored successfully', {
-      //       messageCount: restoredMessages.length,
-      //       sessionId: restoredData.sessionId
-      //     })
-      //   }
-      // } else if (event.data.type === 'startFresh') {
-      //   console.log('Received startFresh message - starting with clean state')
-      //   // Force clear localStorage to ensure no stale data
-      //   try {
-      //     localStorage.removeItem('minimal-chat-logs')
-      //     console.log('Cleared localStorage for fresh start')
-      //   } catch (e) {
-      //     console.error('Error clearing localStorage:', e)
-      //   }
-      //   
-      //   // Ensure we start completely fresh
-      //   setMessages([])
-      //   setDataSubmitted(false)
-      //   
-      //   if (chatLogger.current) {
-      //     // Reinitialize the logger with fresh state
-      //     chatLogger.current.clearLogs()
-      //     chatLogger.current.initializeSession()
-      //   }
-      //   
-      //   console.log('Started with fresh state')
-      // } 
-      else if (event.data.type === 'clearChatStorage') {
+      } else if (event.data.type === 'restoreChatState') {
+        console.log('Received restoreChatState message from parent', event.data.data)
+        const restoredData = event.data.data
+        
+        if (restoredData && restoredData.conversationLog) {
+          // Force clear any stale localStorage before restoring
+          try {
+            localStorage.removeItem('minimal-chat-logs')
+            console.log('Cleared stale localStorage before restoration')
+          } catch (e) {
+            console.error('Error clearing localStorage:', e)
+          }
+          
+          // Convert conversationLog events to Message format with proper Date objects
+          const restoredMessages = restoredData.conversationLog
+            .filter((event: { type: string }) => event.type === 'user_message' || event.type === 'ai_response')
+            .map((event: { id: string; timestamp: string; type: string; content: string }) => ({
+              id: event.id,
+              timestamp: new Date(event.timestamp), // Convert string to Date object
+              type: event.type === 'user_message' ? 'user' as const : 'bot' as const,
+              content: event.content
+            }))
+          
+          // Restore messages
+          setMessages(restoredMessages)
+          
+          // Restore chat logger state
+          if (chatLogger.current) {
+            chatLogger.current.restoreFromQualtricData(restoredData)
+          }
+          
+          // Mark as already submitted (since we're restoring)
+          setDataSubmitted(true)
+          
+          console.log('Chat state restored successfully', {
+            messageCount: restoredMessages.length,
+            sessionId: restoredData.sessionId
+          })
+        }
+      } else if (event.data.type === 'startFresh') {
+        console.log('Received startFresh message - starting with clean state')
+        // Force clear localStorage to ensure no stale data
+        try {
+          localStorage.removeItem('minimal-chat-logs')
+          console.log('Cleared localStorage for fresh start')
+        } catch (e) {
+          console.error('Error clearing localStorage:', e)
+        }
+        
+        // Ensure we start completely fresh
+        setMessages([])
+        setDataSubmitted(false)
+        
+        if (chatLogger.current) {
+          // Reinitialize the logger with fresh state
+          chatLogger.current.clearLogs()
+          chatLogger.current.initializeSession()
+        }
+        
+        console.log('Started with fresh state')
+      } else if (event.data.type === 'clearChatStorage') {
         console.log('Received clearChatStorage message - clearing for next question')
         // Clear all state for the next question
         setMessages([])
