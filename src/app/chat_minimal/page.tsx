@@ -161,8 +161,18 @@ export default function MinimalChatPage() {
         const restoredData = event.data.data
         
         if (restoredData && restoredData.conversationLog) {
+          // Convert conversationLog events to Message format with proper Date objects
+          const restoredMessages = restoredData.conversationLog
+            .filter((event: { type: string }) => event.type === 'user_message' || event.type === 'ai_response')
+            .map((event: { id: string; timestamp: string; type: string; content: string }) => ({
+              id: event.id,
+              timestamp: new Date(event.timestamp), // Convert string to Date object
+              type: event.type === 'user_message' ? 'user' as const : 'bot' as const,
+              content: event.content
+            }))
+          
           // Restore messages
-          setMessages(restoredData.conversationLog)
+          setMessages(restoredMessages)
           
           // Restore chat logger state
           if (chatLogger.current) {
@@ -173,7 +183,7 @@ export default function MinimalChatPage() {
           setDataSubmitted(true)
           
           console.log('Chat state restored successfully', {
-            messageCount: restoredData.conversationLog.length,
+            messageCount: restoredMessages.length,
             sessionId: restoredData.sessionId
           })
         }
