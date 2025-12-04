@@ -116,6 +116,22 @@ export default function ChatPage() {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'forceSubmitData') {
         submitToQualtrics(true)
+      } else if (event.data.type === 'restoreChatState') {
+        console.log('Received restoreChatState message from parent', event.data.data)
+        const restoredData = event.data.data
+        
+        if (restoredData && restoredData.conversationLog) {
+          // Restore messages
+          setMessages(restoredData.conversationLog)
+          
+          // Mark as already submitted (since we're restoring)
+          setDataSubmitted(true)
+          
+          console.log('Chat state restored successfully', {
+            messageCount: restoredData.conversationLog.length,
+            sessionId: restoredData.sessionId
+          })
+        }
       }
     }
 

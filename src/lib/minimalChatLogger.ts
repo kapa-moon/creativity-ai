@@ -210,6 +210,55 @@ export class MinimalChatLogger {
     }
   }
 
+  // Restore from Qualtrics data (used when validation fails and page reloads)
+  restoreFromQualtricData(data: Record<string, string | number | Array<{
+    id: string;
+    timestamp: string;
+    type: string;
+    content: string;
+    participantId: string;
+  }>>): void {
+    try {
+      // Restore session IDs
+      this.sessionId = data.sessionId as string
+      this.participantId = data.participantId as string
+      
+      // Restore conversation log
+      const conversationLog = data.conversationLog as Array<{
+        id: string;
+        timestamp: string;
+        type: string;
+        content: string;
+        participantId: string;
+      }>
+      
+      this.logs = {
+        sessionId: this.sessionId,
+        participantId: this.participantId,
+        startTime: new Date(data.startTime as string),
+        lastActivity: new Date(data.endTime as string),
+        events: conversationLog.map(event => ({
+          id: event.id,
+          timestamp: new Date(event.timestamp),
+          type: event.type as MinimalChatEvent['type'],
+          content: event.content,
+          participantId: event.participantId
+        }))
+      }
+      
+      // Save restored state to storage
+      this.saveToStorage()
+      
+      console.log('Chat logger state restored:', {
+        sessionId: this.sessionId,
+        participantId: this.participantId,
+        eventCount: this.logs.events.length
+      })
+    } catch (error) {
+      console.error('Error restoring chat logger from Qualtrics data:', error)
+    }
+  }
+
   // Export raw log data
   async exportLogs(): Promise<MinimalChatLog> {
     await this.logEvent('session_end', 'Chat session exported')

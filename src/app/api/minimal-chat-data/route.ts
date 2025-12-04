@@ -20,10 +20,13 @@ export async function POST(request: NextRequest) {
           timestamp: new Date().toISOString()
         })
 
-        // Parse and log conversation details
+        // Log conversation details
         if (data.conversationLog) {
           try {
-            const conversation = JSON.parse(data.conversationLog)
+            // conversationLog is already an array, no need to parse
+            const conversation = typeof data.conversationLog === 'string' 
+              ? JSON.parse(data.conversationLog) 
+              : data.conversationLog
             console.log('Conversation log:', conversation)
           } catch (e) {
             console.error('Error parsing conversation log:', e)

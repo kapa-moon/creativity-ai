@@ -156,6 +156,27 @@ export default function MinimalChatPage() {
             }, '*')
           }
         }
+      } else if (event.data.type === 'restoreChatState') {
+        console.log('Received restoreChatState message from parent', event.data.data)
+        const restoredData = event.data.data
+        
+        if (restoredData && restoredData.conversationLog) {
+          // Restore messages
+          setMessages(restoredData.conversationLog)
+          
+          // Restore chat logger state
+          if (chatLogger.current) {
+            chatLogger.current.restoreFromQualtricData(restoredData)
+          }
+          
+          // Mark as already submitted (since we're restoring)
+          setDataSubmitted(true)
+          
+          console.log('Chat state restored successfully', {
+            messageCount: restoredData.conversationLog.length,
+            sessionId: restoredData.sessionId
+          })
+        }
       }
     }
 
