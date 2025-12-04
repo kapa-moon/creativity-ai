@@ -142,6 +142,11 @@ export default function ChatPage() {
             sessionId: restoredData.sessionId
           })
         }
+      } else if (event.data.type === 'clearChatStorage') {
+        console.log('Received clearChatStorage message - clearing for next question')
+        // Clear all state for the next question
+        clearChat()
+        console.log('Chat storage cleared successfully')
       }
     }
 
